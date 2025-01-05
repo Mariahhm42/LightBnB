@@ -81,12 +81,34 @@ const addUser = function (user) {
 /// Reservations
 
 /**
- * Get all reservations for a single user.
+ * Get all reservations for a specific user from the database.
  * @param {string} guest_id The id of the user.
- * @return {Promise<[{}]>} A promise to the reservations.
+ * @param {number} limit The number of results to return (default 10).
+ * @return {Promise<[]>} A promise to the reservations.
  */
 const getAllReservations = function (guest_id, limit = 10) {
-  return getAllProperties(null, 2);
+  const query = `
+    SELECT reservations.*, properties.*, AVG(property_reviews.rating) AS average_rating
+    FROM reservations
+    JOIN properties ON reservations.property_id = properties.id
+    LEFT JOIN property_reviews ON properties.id = property_reviews.property_id
+    WHERE reservations.guest_id = $1
+    GROUP BY reservations.id, properties.id
+    ORDER BY reservations.start_date
+    LIMIT $2;
+  `;
+  const values = [guest_id, limit];
+
+  return pool
+    .query(query, values)
+    .then((result) => {
+      // Resolve with the reservations data
+      return result.rows;
+    })
+    .catch((err) => {
+      console.error("Error retrieving reservations:", err.message);
+      throw err;
+    });
 };
 
 /// Properties
