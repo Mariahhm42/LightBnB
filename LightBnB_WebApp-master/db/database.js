@@ -6,7 +6,7 @@ const pool = new Pool({
   user: 'postgres',  // Replace with your PostgreSQL user
   host: 'localhost',
   database: 'lightbnb', 
-  password: 'Success1$',  
+  password: 'Victorious',  
   port: 5432,  // Default PostgreSQL port
 });
 
@@ -19,14 +19,19 @@ const pool = new Pool({
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function (email) {
-  let resolvedUser = null;
-  for (const userId in users) {
-    const user = users[userId];
-    if (user && user.email.toLowerCase() === email.toLowerCase()) {
-      resolvedUser = user;
-    }
-  }
-  return Promise.resolve(resolvedUser);
+  const query = `
+    SELECT * 
+    FROM users
+    WHERE email = $1;`;
+  return pool
+    .query(query, [email])
+    .then((result) => {
+      return result.rows[0] || null; // Return the user object if found, otherwise null
+    })
+    .catch((err) => {
+      console.error("Error retrieving user by email:", err.message);
+      throw err;
+    });
 };
 
 /**
@@ -35,7 +40,19 @@ const getUserWithEmail = function (email) {
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithId = function (id) {
-  return Promise.resolve(users[id]);
+  const query = `
+    SELECT * 
+    FROM users
+    WHERE id = $1;`;
+  return pool
+    .query(query, [id])
+    .then((result) => {
+      return result.rows[0] || null; // Return the user object if found, otherwise null
+    })
+    .catch((err) => {
+      console.error("Error retrieving user by id:", err.message);
+      throw err;
+    });
 };
 
 /**
@@ -44,10 +61,21 @@ const getUserWithId = function (id) {
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser = function (user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const query = `
+    INSERT INTO users (name, email, password)
+    VALUES ($1, $2, $3)
+    RETURNING *;
+  `;
+  const values = [user.name, user.email, user.password];
+  return pool
+    .query(query, values)
+    .then((result) => {
+      return result.rows[0]; // Return the newly created user object
+    })
+    .catch((err) => {
+      console.error("Error adding new user:", err.message);
+      throw err;
+    });
 };
 
 /// Reservations
@@ -79,7 +107,7 @@ const getAllProperties = (options, limit = 10) => {
 
   // Execute the query using the limit parameter
   return pool
-    .query(`SELECT * FROM properties LIMIT $1`, [limit])
+    .query(query, [limit])
     .then((result) => {
       console.log("Properties retrieved:", result.rows); // Log the rows for debugging
       return result.rows; // Return the rows as the promise's resolved value
