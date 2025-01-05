@@ -178,16 +178,64 @@ const getAllProperties = function (options, limit = 10) {
 
 
 /**
- * Add a property to the database
- * @param {{}} property An object containing all of the property details.
- * @return {Promise<{}>} A promise to the property.
+ * Add a new property to the database.
+ * @param {Object} property - The property object containing details to be added.
+ * @return {Promise<{}>} A promise to the saved property.
  */
 const addProperty = function (property) {
-  const propertyId = Object.keys(properties).length + 1;
-  property.id = propertyId;
-  properties[propertyId] = property;
-  return Promise.resolve(property);
+  const queryString = `
+    INSERT INTO properties (
+      owner_id,
+      title,
+      description,
+      thumbnail_photo_url,
+      cover_photo_url,
+      cost_per_night,
+      street,
+      city,
+      province,
+      post_code,
+      country,
+      parking_spaces,
+      number_of_bathrooms,
+      number_of_bedrooms
+    )
+    VALUES (
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+    )
+    RETURNING *;
+  `;
+
+  const queryParams = [
+    property.owner_id,
+    property.title,
+    property.description,
+    property.thumbnail_photo_url,
+    property.cover_photo_url,
+    property.cost_per_night * 100, // Convert dollars to cents
+    property.street,
+    property.city,
+    property.province,
+    property.post_code,
+    property.country,
+    property.parking_spaces,
+    property.number_of_bathrooms,
+    property.number_of_bedrooms,
+  ];
+
+  // Debug: Log the query string and parameters
+  console.log("Query String:", queryString);
+  console.log("Query Params:", queryParams);
+
+  return pool
+    .query(queryString, queryParams)
+    .then((res) => res.rows[0]) // Return the saved property
+    .catch((err) => {
+      console.error("Error adding property:", err.message);
+      throw err;
+    });
 };
+
 
 module.exports = {
   pool,
